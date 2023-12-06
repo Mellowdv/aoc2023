@@ -1,0 +1,15 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-std=c++20",
+      "-o",
+      "main",
+      "main.cpp"
+    ],
+    "directory": "/home/t.talik/Programming/aoc2023/d5",
+    "file": "/home/t.talik/Programming/aoc2023/d5/main.cpp",
+    "output": "/home/t.talik/Programming/aoc2023/d5/main"
+  }
+]
