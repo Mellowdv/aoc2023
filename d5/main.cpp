@@ -12,6 +12,12 @@ struct Mapping {
     int64_t diff;
 };
 
+struct Range {
+    int64_t min;
+    int64_t max;
+};
+
+using Ranges = std::vector<Range>;
 using MappingContainer = std::vector<Mapping>;
 using Pipeline = std::vector<MappingContainer>;
 using DataIt = std::string_view::iterator;
@@ -58,12 +64,34 @@ int64_t get_next_mapped_value(MappingContainer const &mc, int64_t value_to_map) 
     return value_to_map;
 }
 
+
 int64_t get_location(Pipeline const &pl, int64_t seed_number) {
     int64_t mapped_value = seed_number;
     for (auto const &mc: pl) {
        mapped_value = get_next_mapped_value(mc, mapped_value);
     }
     return mapped_value;
+}
+
+Ranges get_next_mapped_ranges(MappingContainer const &mc, Ranges &ranges_to_map) {
+    for (auto range_to_map: ranges_to_map) { 
+        for (auto const &m: mc) {
+            if (range_to_map.min >= m.min && range_to_map.max < m.max) {
+                range_to_map = Range(range_to_map.min - m.diff, range_to_map.max - m.diff);
+                break;
+            } else if (range_to_map.min >= m.min && range_to_map.max >= m.max) {
+
+            }
+        }
+    }
+}
+
+Ranges get_location_range(Pipeline const &pl, Ranges &seed_ranges) {
+    Ranges mapped_ranges = seed_ranges;
+    for (auto const &mc: pl) {
+        mapped_ranges = get_next_mapped_ranges(mc, mapped_ranges);
+    }
+    return mapped_ranges;
 }
 
 int main() {
@@ -81,20 +109,30 @@ int main() {
 
     Pipeline pl {build_pipeline(file_handle)};
 
-    std::cout << "The size of the pipe " << pl.size() << "\n";
-    for (auto mc: pl) {
-        std::cout << "Size of mapping " << mc.size() << "\n";
-        for (auto m: mc) {
-            std::cout << "Mapping: " << m.min << " " << m.max << " " << m.diff << "\n";
-        }
-    }
-
+    // Part 1
     int64_t min {INT64_MAX};
     for (auto seed: seed_numbers) {
         min = std::min(min, get_location(pl, seed));
-        std::cout << min << "\n";
     }
-    std::cout << "\n";
+    std::cout << min << "\n";
+
+    // Part 2
+    min = INT64_MAX;
+    bool check_range {false};
+    int64_t current_seed;
+    for (auto seed: seed_numbers) {
+        if (check_range) {
+            std::cout << "Checking range " << seed << "\n";
+            for (int64_t range = seed; range > 0; --range) {
+                min = std::min(min, get_location(pl, current_seed + range));
+            }
+            check_range = false;
+        } else {
+            current_seed = seed;
+            check_range = true;
+        }
+    }
+    std::cout << min << "\n";
 
     return 0;
 }
