@@ -58,7 +58,9 @@ int8_t get_rank_index(char c) {
     }
 }
 
-int8_t get_rank_index_jokers(char c) {
+int8_t get_rank_index_with_jokers(char c) {
+    if (c == 'J') return -1;
+
     switch (c) {
 
         case '2':
@@ -91,6 +93,7 @@ int8_t get_rank_index_jokers(char c) {
             return 0;
     }
 }
+
 
 Hand_type determine_hand_type(std::string_view const &hand) {
     std::array<int8_t, 13> aux_array;
@@ -134,6 +137,80 @@ Hand_type determine_hand_type(std::string_view const &hand) {
     return high_card;
 }
 
+Hand_type determine_hand_type_with_jokers(std::string_view const &hand) {
+    std::array<int8_t, 13> aux_array;
+    aux_array.fill(0);
+    for (auto c: hand) {
+        aux_array[get_rank_index(c)]++;
+    }
+
+    bool found_five {false};
+    bool found_four {false};
+    bool found_three {false};
+    int8_t found_two {};
+    for (auto n: aux_array) {
+        std::cout << n << " ";
+    }
+    std::cout << "\n";
+    int8_t num_of_jokers {aux_array[JOKER]};
+    for (auto num: aux_array) {
+        switch (num) {
+            case 5:
+                return five_of_a_kind;
+            case 4:
+                found_four = true;
+                break;
+            case 3:
+                found_three = true;
+                continue;
+            case 2:
+                found_two++;
+                continue;
+            default:
+                continue;
+        }
+    }
+
+    if (found_four) {
+        if (num_of_jokers == 1 || num_of_jokers == 4) {
+            return five_of_a_kind;
+        } else {
+            return four_of_a_kind;
+        }
+    } else if (found_three && found_two) {
+        if (num_of_jokers == 3 || num_of_jokers == 2) {
+            return five_of_a_kind;
+        } else {
+            return full_house;
+        }
+    } else if (found_three) {
+        if (num_of_jokers == 1) {
+            return four_of_a_kind;
+        } else {
+            return three_of_a_kind;
+        }
+    } else if (found_two == 2) {
+        if (num_of_jokers == 2) {
+            return four_of_a_kind;
+        } else if (num_of_jokers == 1) {
+            return full_house;
+        } else {
+            return two_pair;
+        }
+    } else if (found_two == 1) {
+        if (num_of_jokers == 2 || num_of_jokers == 1) {
+            return three_of_a_kind;
+        }
+        return one_pair;
+    }
+
+    if (num_of_jokers == 1) {
+        return one_pair;
+    }
+    return high_card;
+}
+
+
 void sort_cards(Hands &hands) {
     auto comparator = [] (Hand const &lhs, Hand const &rhs)
     {
@@ -150,6 +227,33 @@ void sort_cards(Hands &hands) {
             if (get_rank_index(*lhs_iter) < get_rank_index(*rhs_iter)) {
                 return true;
             } else if (get_rank_index(*lhs_iter) > get_rank_index(*rhs_iter)) {
+                return false;
+            } else {
+                ++lhs_iter;
+                ++rhs_iter;
+            }
+        }
+        return true;
+    };
+    std::sort(hands.begin(), hands.end(), comparator);
+}
+
+void sort_cards_with_jokers(Hands &hands) {
+    auto comparator = [] (Hand const &lhs, Hand const &rhs)
+    {
+        if (lhs.hand_type < rhs.hand_type) {
+            return true;
+        } else if (lhs.hand_type > rhs.hand_type) {
+            return false;
+        }
+
+        auto lhs_iter {lhs.char_representation.begin()};
+        auto rhs_iter {rhs.char_representation.begin()};
+
+        while (lhs_iter != lhs.char_representation.end()) {
+            if (get_rank_index_with_jokers(*lhs_iter) < get_rank_index_with_jokers(*rhs_iter)) {
+                return true;
+            } else if (get_rank_index_with_jokers(*lhs_iter) > get_rank_index_with_jokers(*rhs_iter)) {
                 return false;
             } else {
                 ++lhs_iter;
@@ -189,10 +293,13 @@ int main() {
         hands.push_back(h);
     }
     sort_cards(hands);
-    for (auto h: hands) {
-        std::cout << h.char_representation << "\n";
-    }
     std::cout << determine_result(hands) << std::endl;
-    
+
+    for (auto &h: hands) {
+        h.hand_type = determine_hand_type_with_jokers(h.char_representation);
+    }
+    sort_cards_with_jokers(hands);
+    std::cout << determine_result(hands) << std::endl;
+
     return 0;
 }
