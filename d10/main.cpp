@@ -26,14 +26,13 @@ constexpr char NW = 'J';
 constexpr char SW = '7';
 constexpr char SE = 'F';
 
-std::vector<std::vector<Tile>> loops {};
+std::vector<Tile> loop {};
 int32_t find_loop_length(Maze const &m, Tile const &start, Direction const initial_dir) {
     
     Direction direction {initial_dir};
     Tile current_tile {start};
     int32_t loop_length {0};
 
-    loops.push_back(std::vector<Tile>());
     while (current_tile.pipe != 'S') {
         ++loop_length;
         switch (direction) {
@@ -57,7 +56,7 @@ int32_t find_loop_length(Maze const &m, Tile const &start, Direction const initi
                 }
                 current_tile.pipe = m[current_tile.p.first - 1][current_tile.p.second];
                 current_tile.p.first -= 1;
-                loops.back().push_back(current_tile);
+                loop.push_back(current_tile);
                 break;
             case S:
                 if (current_tile.p.first == m.size() - 1) {
@@ -79,7 +78,7 @@ int32_t find_loop_length(Maze const &m, Tile const &start, Direction const initi
                 }
                 current_tile.pipe = m[current_tile.p.first + 1][current_tile.p.second];
                 current_tile.p.first += 1;
-                loops.back().push_back(current_tile);
+                loop.push_back(current_tile);
                 break;
             case E:
                 if (current_tile.p.second == m[0].size() - 1) {
@@ -101,7 +100,7 @@ int32_t find_loop_length(Maze const &m, Tile const &start, Direction const initi
                 }
                 current_tile.pipe = m[current_tile.p.first][current_tile.p.second + 1];
                 current_tile.p.second += 1;
-                loops.back().push_back(current_tile);
+                loop.push_back(current_tile);
                 break;
             case W:
                 if (current_tile.p.second == 0) {
@@ -123,7 +122,7 @@ int32_t find_loop_length(Maze const &m, Tile const &start, Direction const initi
                 }
                 current_tile.pipe = m[current_tile.p.first][current_tile.p.second - 1];
                 current_tile.p.second -= 1;
-                loops.back().push_back(current_tile);
+                loop.push_back(current_tile);
                 break;
             default:
                 break;
@@ -133,49 +132,70 @@ int32_t find_loop_length(Maze const &m, Tile const &start, Direction const initi
     return loop_length / 2;
 }
 
-bool check_if_enclosed(Maze &m, Point const &p) {
-    std::cout << p.first << " " << p.second << std::endl;
-    Point new_point {p};
+enum Side {
+    In,
+    Out
+};
 
-    if (m[p.first][p.second] == 'E') return true;
-    if (m[p.first][p.second] == 'C') return true;
-    if (p.first == 0 || p.second == 0 || p.first == m.size() - 1 || p.second == m.size() - 1) {
-        return false;
-    }
-    m[p.first][p.second] = 'C';
-
-    if (m[p.first + 1][p.second] != 'X') {
-        if (!check_if_enclosed(m, Point(p.first + 1, p.second))) {
-            return false;
-        }
-    }
-    if (m[p.first - 1][p.second] != 'X') {
-        if (!check_if_enclosed(m, Point(p.first - 1, p.second))) {
-            return false;
-        }
-    }
-    if (m[p.first][p.second + 1] != 'X') {
-        if (!check_if_enclosed(m, Point(p.first, p.second + 1))) {
-            return false;
-        }
-    }
-    if (m[p.first][p.second - 1] != 'X') {
-        if (!check_if_enclosed(m, Point(p.first, p.second - 1))) {
-            return false;
-        }
-    }
-    m[p.first][p.second] = 'E';
-    return true;
-}
+enum Pointing {
+    Unknown,
+    Up,
+    Down
+};
 
 int32_t find_enclosed_area(Maze &m) {
     int32_t area {};
-    for (int32_t i = 1; i < m.size() - 1; ++i) {
-        for (int32_t j = 1; j < m[0].size() - 1; ++j) {
-            if (m[i][j] != 'X') continue;
-            m[i][j] = 'C';
-            if (check_if_enclosed(m, Point(i, j))) {
+    Side side {Out};   
+    Pointing pointing {Unknown};
+    for (int32_t i = 0; i < m.size(); ++i) {
+        side = Out;
+        pointing = Unknown;
+        for (int32_t j = 0; j < m[0].size(); ++j) {
+            if (m[i][j] == '-') continue;
+            if (m[i][j] == '.' && side == In) {
                 ++area;
+            }
+            if (m[i][j] == '|') {
+                if (side == Out) {
+                    side = In;
+                } else {
+                    side = Out;
+                }
+                continue;
+            }
+
+            if (m[i][j] == 'F') {
+                pointing = Down;
+                continue;
+            } else if (m[i][j] == 'L') {
+                pointing = Up;
+                continue;
+            }
+
+            if (m[i][j] == '7') {
+                if (pointing == Down) {
+                    continue;
+                } else {
+                    if (side == Out) {
+                        side = In;
+                    } else {
+                        side = Out;
+                    }
+                    continue;
+                }
+            }
+
+            if (m[i][j] == 'J') {
+                if (pointing == Up) {
+                    continue;
+                } else {
+                    if (side == Out) {
+                        side = In;
+                    } else {
+                        side = Out;
+                    }
+                    continue;
+                }
             }
         }
     }
@@ -183,7 +203,7 @@ int32_t find_enclosed_area(Maze &m) {
 }
 
 int main() {
-    std::filesystem::path file_path {"/home/ttalik/tmp/cpp/aoc2023/d10/input.txt"};
+    std::filesystem::path file_path {"/home/t.talik/Programming/aoc2023/d10/input.txt"};
     std::fstream file_handle {file_path};
 
     Maze m {};
@@ -206,31 +226,24 @@ int main() {
         ++line_index;
     }
 
-    int32_t max {};
+    int32_t length;
     for (auto dir: {N, S, E, W}) {
-        max = std::max(max, find_loop_length(m, Tile {start, 'X'}, dir));
+        length = find_loop_length(m, Tile {start, 'X'}, dir);
+        if (length > 0) {
+            break;
+        }
     }
-    std::cout << max << std::endl;
+    std::cout << length << "\n";
 
-    for (auto const &loop: loops) {
-        std::cout << "length " << loop.size() << "\n";
-    }
-    for (auto const &tile: loops[1]) {
-        m[tile.p.first][tile.p.second] = 'X';
-    }
-    for (auto const &line: m) {
-        for (auto ch: line) {
-            std::cout << ch;
+    for (auto &line: m) {
+        for (auto &ch: line) {
+            ch = '.';
         }
-        std::cout << std::endl;
     }
-    std::cout << start.first << " " << start.second << std::endl;
-    std::cout << find_enclosed_area(m) << std::endl;
-    for (auto const &line: m) {
-        for (auto ch: line) {
-            std::cout << ch;
-        }
-        std::cout << std::endl;
+    for (auto const &tile: loop) {
+        m[tile.p.first][tile.p.second] = tile.pipe;
     }
+    m[start.first][start.second] = '|';
+    std::cout << find_enclosed_area(m) << "\n";
     return 0;
 }
