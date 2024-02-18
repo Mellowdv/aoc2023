@@ -1,0 +1,274 @@
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <ranges>
+#include <vector>
+#include <algorithm>
+
+using Current_group = std::vector<int64_t>::iterator;
+constexpr bool logging = true;
+
+void log(std::string const &s) {
+    if (logging) {
+        std::cout << "[LOG] " << s << "\n";
+    }
+}
+
+static std::vector<int64_t> results;
+static std::vector<int64_t> results2;
+
+bool check_if_valid(std::string_view const &arrangement, std::vector<int64_t> const &contiguous_groups) {
+    bool separator_needed {false};
+    auto it = arrangement.begin();
+    while (*it != '#') { ++it; }
+   
+    auto groups_to_satisfy {contiguous_groups.size()};
+    for (auto group_count: contiguous_groups) {
+        while (it <= arrangement.end()) {
+            if (group_count == 0) {
+                //log("Group completed");
+                separator_needed = true;
+                --groups_to_satisfy;
+                break;
+            }
+            if (*it == '#' && !separator_needed) { 
+                //log("Found needed '#'");
+                ++it; 
+                --group_count;
+                continue;
+            }
+            if (*it == '.' && separator_needed) {
+                //log("Found needed separator");
+                while (*it == '.') { ++it; }
+                separator_needed = false;
+            } else {
+                return false;
+            }
+        }
+    }
+    if (groups_to_satisfy == 0) {
+        // check for ?'s
+        while (it < arrangement.end()) {
+            if (*it == '#') {
+                //log("Found extra #'s!");
+                return false;
+            }
+            ++it;
+        }
+        return true;
+    } else {
+        return false;
+    }
+}
+
+std::string trim(std::string_view const input) {
+    auto view = input | std::views::reverse | std::views::drop_while([](char const ch) {return ch == '.';}) | std::views::reverse;
+    return {view.begin(), view.end()};
+}
+
+bool contains(std::string_view const &s_v, char c) {
+    return s_v.end() != std::find_if(s_v.begin(), s_v.end(), [&c] (const char ch) { return ch == c; });
+}
+
+int64_t dp_attempt_again(std::string_view const &record,
+                         std::vector<int64_t> const &c_g,
+                         int64_t string_idx,
+                         int64_t c_g_idx) {
+    if (record.size() == 0) {
+        log("Hi\n");
+        if (c_g_idx == c_g.size()) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
+    if (c_g_idx == c_g.size()) {
+        log("Max CGI!\n");
+        if (contains(record, '#')) {
+            return 0;
+        }
+        return 1;
+    }
+
+    int64_t result {};
+    if (record[0] == '.' || record[0] == '?') {
+        log("Attempting new group");
+        result += dp_attempt_again(
+                std::string_view(record.begin() + 1, record.end()),
+                c_g,
+                string_idx + 1,
+                c_g_idx); 
+    }
+
+    if (record[0] == '#' || record[0] == '?') {
+        // std::cout << c_g[c_g_idx] << " " << record.size() << " " << !contains(std::string_view(record.begin(), record.begin() + c_g[c_g_idx]), '.') << " " << *(record.begin() + c_g[c_g_idx]) << "\n";
+        if (c_g[c_g_idx] <= record.size()
+                && !contains(std::string_view(record.begin(), record.begin() + c_g[c_g_idx]), '.')
+                && (record.size() == c_g[c_g_idx] || *(record.begin() + c_g[c_g_idx]) != '#')) {
+            log("Attempting to match group");
+            if (record.size() == c_g[c_g_idx]) {
+                // This is a valid group and the string is over basically
+                log("EOS!");
+                result += dp_attempt_again(
+                        std::string_view(record.begin() + c_g[c_g_idx], record.end()),
+                        c_g, 
+                        string_idx + c_g[c_g_idx],
+                        c_g_idx + 1);
+            } else {
+                // This is a valid group but the string is not over
+                log("Next group");
+                result += dp_attempt_again(
+                        std::string_view(record.begin() + c_g[c_g_idx] + 1, record.end()),
+                        c_g,
+                        string_idx + c_g[c_g_idx] + 1,
+                        c_g_idx + 1);
+            }
+        }
+    }
+    return result;
+}
+
+int64_t brute_force_helper(std::string &springs, int64_t springs_left, std::string::iterator it, std::vector<int64_t> const &c_g, std::vector<std::vector<int64_t>> &dp) {
+   
+    log("Arguments: springs_left " + std::to_string(springs_left) + " it " + std::to_string(std::distance(springs.begin(), it)));
+    if (dp[std::distance(springs.begin(), it)][springs_left] != 0) {
+        log("Returning cached value: " + std::to_string(dp[std::distance(springs.begin(), it)][springs_left]));
+        return dp[std::distance(springs.begin(), it)][springs_left];
+    }
+    //log("Entered brute_force_helper with input: " + springs);
+    //log("Springs left: " + std::to_string(springs_left));
+    if (springs_left > std::distance(it, springs.end())) { return 0; }
+    //log("There are enough indexes left");
+
+    if (springs_left == 0) {
+        //log("Checking For Validity\n" + springs);
+        bool result = check_if_valid(std::string_view(springs), c_g);    
+        if (result) {
+            //log(springs);
+        }
+        //log("Result: " + std::to_string(result));
+        return result ? 1 : 0;
+    }
+
+    if (it >= springs.end()) {
+        //log("End of string encountered");
+        return 0;
+    }
+
+    if (*it == '#') {
+        dp[std::distance(springs.begin(), it)][springs_left] += brute_force_helper(springs, springs_left - 1, it + 1, c_g, dp);
+        return dp[std::distance(springs.begin(), it)][springs_left];
+    }
+
+    if (*it == '?') {
+        *it = '#';
+        auto result_with_hash = brute_force_helper(springs, springs_left - 1, it + 1, c_g, dp);
+        *it = '.';
+        auto result_with_dot = brute_force_helper(springs, springs_left, it + 1, c_g, dp);
+        *it = '?';
+        dp[std::distance(springs.begin(), it)][springs_left] += (result_with_hash + result_with_dot);
+        return dp[std::distance(springs.begin(), it)][springs_left];
+    }
+
+    if (*it == '.') {
+        dp[std::distance(springs.begin(), it)][springs_left] += brute_force_helper(springs, springs_left, it+1, c_g, dp);
+        return dp[std::distance(springs.begin(), it)][springs_left];
+    }
+    return 0;
+}
+
+int64_t brute_force(std::string springs, std::vector<int64_t> contiguous_groups) {
+    log("Brute forcing line " + springs);
+    int64_t sum {};
+    for (auto group: contiguous_groups) {
+        sum += group;
+    }
+    std::vector<std::vector<int64_t>> dp(springs.size() + 1, std::vector<int64_t>(sum + 1, 0));
+    auto result = brute_force_helper(springs, sum, springs.begin(), contiguous_groups, dp);
+    return result; 
+}
+
+int64_t dp_maybe(std::string springs, std::vector<int64_t> contiguous_groups) {
+    int64_t sum {};
+    for (auto group: contiguous_groups) {
+        sum += group;
+    }
+    std::vector<std::vector<int64_t>> dp(springs.size() + 1, std::vector<int64_t>(sum + 1, -1));
+    auto result = dp_attempt_again(std::string_view(springs), contiguous_groups, 0, 0);
+    return result;
+}
+
+int64_t process_line(std::string const &l) {
+    std::stringstream sstream {l}; 
+    
+    std::string springs {};
+    sstream >> springs;
+    
+    std::vector<int64_t> contiguous_groups {};
+    std::string tmp {};
+    sstream >> tmp;
+    
+    for (auto num: std::views::split(tmp, ',')) {
+       contiguous_groups.push_back(std::stoi(num.begin().base()));
+    }
+    auto result = brute_force(springs, contiguous_groups);
+    results.push_back(result);
+    return result;
+}
+
+int64_t process_line2(std::string const &l) {
+    std::cout << l << "\n";
+    std::stringstream sstream {l}; 
+    
+    std::string springs {};
+    sstream >> springs;
+    std::string new_springs {springs};
+    for (int i {0}; i < 4; ++i) {
+        new_springs += "?" + springs;
+    }
+    //log("New springs: " + new_springs);
+    
+    std::vector<int64_t> contiguous_groups {};
+    std::string tmp {};
+    sstream >> tmp;
+    std::string new_cgs {tmp};
+    for (int j {0}; j < 4; ++j) {
+        new_cgs += "," + tmp;
+    }
+    //log("New cg's: " + new_cgs);
+
+    for (auto num: std::views::split(new_cgs, ',')) {
+       contiguous_groups.push_back(std::stoi(num.begin().base()));
+    }
+    auto result = dp_maybe(new_springs, contiguous_groups);
+    results2.push_back(result);
+    return result;
+}
+
+int main() {
+    std::filesystem::path file_path {"/home/t.talik/Programming/aoc2023/d12/input.txt"};
+    std::fstream file_handle {file_path};
+
+    std::string line {};
+    while (std::getline(file_handle, line)) {
+        std::cout << process_line(line) << "\n";
+        //std::cout << process_line2(line) << "\n";
+    }
+    int64_t sum {};
+    for (auto res: results) {
+        std::cout << res << "\n";
+        sum += res;
+    }
+    std::cout << "Total: " << sum << "\n";
+    
+    /*
+    int64_t sum2 {};
+    for (auto res: results2) {
+        std::cout << res << "\n";
+        sum2 += res;
+    }
+    std::cout << "Total 2: " << sum2 << "\n";
+    */
+    return 0;
+}
