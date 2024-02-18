@@ -35,10 +35,17 @@ int64_t count_arrangements(std::string_view const &record, std::vector<int64_t> 
     int64_t valid_arrangements {};
     int64_t group_size {contiguous_groups.at(group_index)};
     int64_t current_chunk_length {};
+    int64_t consecutive_springs {};
     for (auto it = record.begin(); it < record.end(); ++it) {
         if (*it != '.') {
             ++current_chunk_length; 
+            if (*it == '?') {
+                consecutive_springs = 0;
+            } else {
+                ++consecutive_springs;
+            }
         } else {
+            consecutive_springs = 0;
             current_chunk_length = 0;
         }
 
@@ -48,7 +55,7 @@ int64_t count_arrangements(std::string_view const &record, std::vector<int64_t> 
         if ((current_chunk_length >= group_size) && is_group_valid) {
             auto current_pos = std::distance(record.begin(), it);
             // In case we found a chunk of '#'s exactly as long as our group, we shouldn't look any further really
-            if (should_lock_group_in(record, it, group_size)) {
+            if (group_size == consecutive_springs) {
                 dp[group_index + 1].at(current_pos) = dp[group_index][current_pos - group_size];
                 int64_t tmp = dp[group_index + 1][current_pos];
                 while (current_pos < record.size()) {
