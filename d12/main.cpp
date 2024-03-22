@@ -1,77 +1,88 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <unordered_map>
 #include <vector>
 
-using Dp = std::vector<std::vector<int64_t>>;
+static bool log {false};
 
-void print_dp(Dp const &dp) {
-    for (auto vec: dp) {
-        for (auto num: vec) {
-            std::cout << num << " ";
-        }
-        std::cout << "\n";
+using ArchivedRecord = std::pair<std::string, int64_t>;
+struct ArchivedRecordHash {
+    std::size_t operator()(const ArchivedRecord& ar) const noexcept {
+        std::size_t hash = std::hash<std::string>{} (ar.first);
+        return hash;
     }
+};
+
+using Memo = std::unordered_map<ArchivedRecord, int64_t, ArchivedRecordHash>;
+
+void log_comment(std::string_view const &msg) {
+    if (!log) return;
+    std::cout << msg << "\n";
 }
 
-bool should_lock_group_in(std::string_view const &record, std::string_view::iterator it, int64_t group_size) {
-    int64_t found_hashes {};
-    for (int idx = 0; idx < group_size && it < record.end(); ++idx) {
-        if (*it == '#') ++found_hashes;
-        ++it;
-    }
-    if (found_hashes == group_size) return true;
-    return false;
-}
+int64_t count_arrangements(
+        std::string_view const &record,
+        std::string_view::iterator pos,
+        std::vector<int64_t> const &contiguous_groups,
+        int64_t group_index,
+        Memo &memo) {
 
-int64_t count_arrangements(std::string_view const &record, std::vector<int64_t> const &contiguous_groups, int64_t group_index, Dp &dp) {
-
+    int64_t total {0};
     if (group_index >= contiguous_groups.size()) {
-        std::cout << "Ran out of groups\n";
-        return dp.at(contiguous_groups.size()).at(record.size() - 1);
-    }
-    std::cout << "Counting arrangements for " << contiguous_groups.at(group_index) << "\n";
-    
-    int64_t valid_arrangements {};
-    int64_t group_size {contiguous_groups.at(group_index)};
-    int64_t current_chunk_length {};
-    int64_t consecutive_springs {};
-    for (auto it = record.begin(); it < record.end(); ++it) {
-        if (*it != '.') {
-            ++current_chunk_length; 
-            if (*it == '?') {
-                consecutive_springs = 0;
-            } else {
-                ++consecutive_springs;
-            }
-        } else {
-            consecutive_springs = 0;
-            current_chunk_length = 0;
+        //log_comment("Reached last group");
+        for (auto it = pos; it < record.end(); ++it) {
+            if (*it == '#') return 0;
         }
+        return 1;
+    }
 
-        auto left_bound {it - group_size};
-        auto right_bound {it + 1};
-        bool is_group_valid {(left_bound < record.begin() || *left_bound != '#') && (right_bound == record.end() || *right_bound != '#')};
-        if ((current_chunk_length >= group_size) && is_group_valid) {
-            auto current_pos = std::distance(record.begin(), it);
-            // In case we found a chunk of '#'s exactly as long as our group, we shouldn't look any further really
-            if (group_size == consecutive_springs) {
-                dp[group_index + 1].at(current_pos) = dp[group_index][current_pos - group_size];
-                int64_t tmp = dp[group_index + 1][current_pos];
-                while (current_pos < record.size()) {
-                    dp[group_index + 1].at(current_pos) = tmp;
-                    ++current_pos;
-                }
+    if (pos < record.end()) {
+        auto key = ArchivedRecord {std::string(pos, record.end()), group_index};
+        if (memo.contains(key)) {
+            //log_comment("Accessed cache :)");
+            return memo[key];
+        }
+    }
+    // If there are less slots remaining than we need, this is failed, return 0
+    auto group_size = contiguous_groups.at(group_index);
+    if (std::distance(pos, record.end()) < group_size) return 0;
+    // If the current pos is '.', then we can continue, there's nothing for us here.        
+    if (*pos == '.') {
+        return count_arrangements(record, pos + 1, contiguous_groups, group_index, memo);
+    }
+
+    // If the current pos is '?' or '#' we need to do something
+    // Set up window to be checked
+    auto left_bound {pos};
+    auto right_bound {pos + group_size};
+
+    // Right bound is not guaranteed so needs to be checked, left is guaranteed because we skip all '.'s
+    int8_t valid_count {0};
+    if (*right_bound != '#') {
+        for (auto it = pos; it < right_bound; ++it) {
+            if (*it == '.') {
                 break;
-            }
-
-            if (dp[group_index][current_pos - group_size] != 0) {
-                valid_arrangements += dp[group_index][current_pos - group_size]; 
-                dp[group_index + 1].at(current_pos) += valid_arrangements;
+            } else {
+                valid_count++;
             }
         }
     }
-    return count_arrangements(record, contiguous_groups, group_index + 1, dp);
+
+    // '?' is treated as '#'
+    // If the current window fits the group, then check next group (? treated as '#' case)
+    if (valid_count >= group_size) {
+        total += count_arrangements(record, pos + (group_size + 1), contiguous_groups, group_index + 1, memo);
+    }
+    
+    // '?' is treated as '.'
+    // In cases when pos was '?' we also need to check the case where it's treated as '.'
+    if (*pos == '?') {
+        total += count_arrangements(record, pos + 1, contiguous_groups, group_index, memo);
+    }
+    memo.insert({ArchivedRecord {std::string(pos, record.end()), group_index}, total});
+
+    return total;
 }
 
 int64_t process_line(std::string const &input) {
@@ -81,38 +92,66 @@ int64_t process_line(std::string const &input) {
     std::stringstream buf {input};
     
     buf >> tmp_record;
-    std::string record {"." + tmp_record};
-    std::cout << record << std::endl;
+    std::string_view record {tmp_record};
     
     int64_t tmp;
     while (buf >> tmp) {
         contiguous_groups.push_back(tmp);
-        std::cout << contiguous_groups.back() << std::endl;
         // eat ',' or '\n'
         char ch {};
         buf >> ch;
     }
 
-    Dp dp {contiguous_groups.size() + 1, std::vector<int64_t>(record.size())};
-    for (auto &base_slot: dp.at(0)) {
-        base_slot = 1;
+    Memo memo {};
+    auto val = count_arrangements(record, record.begin(), contiguous_groups, 0, memo);
+    return val;
+}
+
+int64_t process_line2(std::string const &input) {
+    std::vector<int64_t> contiguous_groups;
+    std::string tmp_record;
+
+    std::stringstream buf {input};
+    
+    buf >> tmp_record;
+    std::string unfolded_record = tmp_record;
+    for (int i = 0; i < 4; ++i) {
+        unfolded_record += ("?" + tmp_record); 
     }
-    auto val = count_arrangements(record, contiguous_groups, 0, dp);
-    print_dp(dp);
+    std::string_view record {unfolded_record};
+    
+    int64_t tmp;
+    std::vector<int64_t> contiguous_groups_unfolded;
+    while (buf >> tmp) {
+        contiguous_groups.push_back(tmp);
+        // eat ',' or '\n'
+        char ch {};
+        buf >> ch;
+    }
+    for (int j = 0; j < 5; ++j) {
+        for (auto group: contiguous_groups) contiguous_groups_unfolded.push_back(group);
+    }
+
+    Memo memo {};
+    auto val = count_arrangements(record, record.begin(), contiguous_groups_unfolded, 0, memo);
     return val;
 }
 
 int main() {
-    std::filesystem::path file_path {"/home/t.talik/Programming/aoc2023/d12/input.txt"};
+    log = true;
+    std::filesystem::path file_path {"/home/t.talik/Programming/cpp/aoc2023/d12/input.txt"};
     std::fstream file_handle {file_path};
 
     std::string line {};
     int64_t sum {};
+    int64_t sum2 {};
     while (std::getline(file_handle, line)) {
         auto tmp {process_line(line)};
-        std::cout << tmp << std::endl;
+        auto tmp2 {process_line2(line)};
         sum += tmp;
+        sum2 += tmp2;
     }
     std::cout << "Sum is... " << sum << "\n";
+    std::cout << "Sum2 is... " << sum2 << "\n";
     return 0;
 }

@@ -37,7 +37,7 @@ def count_permutations(symbols):
             matches = re.findall(r'#+', candidate)
             match_lengths = [len(x) for x in matches]
             if match_lengths == counts:
-                print(candidate)
+                #print(candidate)
                 results.add(candidate)
 
     return len(results)
