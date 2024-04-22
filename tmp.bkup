@@ -1,0 +1,164 @@
+136
+Calculated load is 87
+Calculated load is 69
+Calculated load is 69
+Current load is 69
+Load at cycle is 69
+Current cycle is 3
+Found current_load at previous_cycle 1
+2
+Calculated load is 69
+Current load is 69
+Load at cycle is 69
+Current cycle is 4
+Found current_load at previous_cycle 1
+2
+Calculated load is 65
+Calculated load is 64
+Calculated load is 65
+Current load is 65
+Load at cycle is 65
+Current cycle is 7
+Found current_load at previous_cycle 4
+5
+Calculated load is 63
+Calculated load is 68
+Calculated load is 69
+Current load is 69
+Load at cycle is 69
+Current cycle is 10
+Found current_load at previous_cycle 1
+8
+Calculated load is 69
+Current load is 69
+Load at cycle is 69
+Current cycle is 11
+Found current_load at previous_cycle 1
+5
+Calculated load is 65
+Current load is 65
+Load at cycle is 65
+Current cycle is 12
+Found current_load at previous_cycle 4
+7
+Calculated load is 64
+Current load is 64
+Load at cycle is 64
+Current cycle is 13
+Found current_load at previous_cycle 5
+8
+Calculated load is 65
+Current load is 65
+Load at cycle is 65
+Current cycle is 14
+Found current_load at previous_cycle 4
+8
+Calculated load is 63
+Current load is 63
+Load at cycle is 63
+Current cycle is 15
+Found current_load at previous_cycle 7
+10
+Calculated load is 68
+Current load is 68
+Load at cycle is 68
+Current cycle is 16
+Found current_load at previous_cycle 8
+11
+Calculated load is 69
+Current load is 69
+Load at cycle is 69
+Current cycle is 17
+Found current_load at previous_cycle 1
+2
+Calculated load is 69
+Current load is 69
+Load at cycle is 69
+Current cycle is 18
+Found current_load at previous_cycle 1
+16
+Calculated load is 65
+Current load is 65
+Load at cycle is 65
+Current cycle is 19
+Found current_load at previous_cycle 4
+7
+Calculated load is 64
+Current load is 64
+Load at cycle is 64
+Current cycle is 20
+Found current_load at previous_cycle 5
+8
+Calculated load is 65
+Current load is 65
+Load at cycle is 65
+Current cycle is 21
+Found current_load at previous_cycle 4
+19
+Calculated load is 63
+Current load is 63
+Load at cycle is 63
+Current cycle is 22
+Found current_load at previous_cycle 7
+10
+Calculated load is 68
+Current load is 68
+Load at cycle is 68
+Current cycle is 23
+Found current_load at previous_cycle 8
+11
+Calculated load is 69
+Current load is 69
+Load at cycle is 69
+Current cycle is 24
+Found current_load at previous_cycle 1
+10
+Calculated load is 69
+Current load is 69
+Load at cycle is 69
+Current cycle is 25
+Found current_load at previous_cycle 1
+9
+Calculated load is 65
+Current load is 65
+Load at cycle is 65
+Current cycle is 26
+Found current_load at previous_cycle 4
+14
+Calculated load is 64
+Current load is 64
+Load at cycle is 64
+Current cycle is 27
+Found current_load at previous_cycle 5
+15
+Calculated load is 65
+Current load is 65
+Load at cycle is 65
+Current cycle is 28
+Found current_load at previous_cycle 4
+12
+Calculated load is 63
+Current load is 63
+Load at cycle is 63
+Current cycle is 29
+Found current_load at previous_cycle 7
+17
+Calculated load is 68
+Current load is 68
+Load at cycle is 68
+Current cycle is 30
+Found current_load at previous_cycle 8
+18
+[ 87 69 69 69 65 64 65 63 68 69 69 65 64 65 63 68 69 69 65 64 65 63 68 69 69 65 64 65 63 68 ]
+0 is the new orange
+.....#....
+....#...O#
+.....##...
+..O#......
+.....OOO#.
+.O#...O#.#
+....O#....
+......OOOO
+#...O###.O
+#.OOO#...O
+2143731 ns
