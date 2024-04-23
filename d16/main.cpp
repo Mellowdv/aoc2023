@@ -96,9 +96,9 @@ void simulate_beam(
 }
                 
 
-int64_t find_energized_tiles(std::array<std::array<char, SIZE>, SIZE> const &field) {
+int64_t find_energized_tiles(std::array<std::array<char, SIZE>, SIZE> const &field, Beam start_beam) {
     std::queue<Beam> beam_queue {};
-    beam_queue.push(Beam(Direction::RIGHT, 0, 0));
+    beam_queue.push(start_beam);
     std::vector<std::pair<int8_t, int8_t>> energized_fields {};
     Tab tab;
     for (auto &first: tab) {
@@ -137,10 +137,20 @@ std::array<std::array<char, SIZE>, SIZE> build_field(std::fstream &fh) {
 
 int main() {
     auto const begin{std::chrono::high_resolution_clock::now()};
-    std::filesystem::path file_path {"/home/t.talik/Programming/cpp/aoc2023/d16/input.txt"};
+    //std::filesystem::path file_path {"/home/t.talik/Programming/cpp/aoc2023/d16/input.txt"};
+    std::filesystem::path file_path {"/home/ttalik/tmp/cpp/aoc2023/d16/input.txt"};
     std::fstream file_handle {file_path};
     auto const field {build_field(file_handle)};
-    std::cout << find_energized_tiles(field) << std::endl;
+    std::cout << find_energized_tiles(field, Beam(Direction::RIGHT, 0, 0)) << std::endl;
+
+    int64_t max {0};
+    for (int idx = 0; idx < SIZE; ++idx) {
+        max = std::max(max, find_energized_tiles(field, Beam(Direction::RIGHT, idx, 0)));
+        max = std::max(max, find_energized_tiles(field, Beam(Direction::LEFT, idx, SIZE - 1)));
+        max = std::max(max, find_energized_tiles(field, Beam(Direction::DOWN, 0, idx)));
+        max = std::max(max, find_energized_tiles(field, Beam(Direction::UP, SIZE - 1, idx)));
+    }
+    std::cout << "The max is: " << max << std::endl;
 
     auto const end{std::chrono::high_resolution_clock::now()};
     std::cout << (end - begin).count() << " ns" << std::endl;
