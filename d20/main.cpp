@@ -6,10 +6,18 @@
 #include <variant>
 #include <vector>
 #include <unordered_map>
+#include <numeric>
+#include <algorithm>
 
 int64_t LOW_PULSES_SENT = 0;
 int64_t HIGH_PULSES_SENT = 0;
 int64_t PULSES_SO_FAR = 0;
+int64_t QB_LOWEST = 0;
+int64_t MP_LOWEST = 0;
+int64_t NG_LOWEST = 0;
+int64_t QT_LOWEST = 0;
+
+std::unordered_map<std::string, int64_t> module_name_to_index;
 
 enum class FF_State: uint8_t {
     OFF = 0,
@@ -59,6 +67,34 @@ struct Conjunction {
             } else {
                 LOW_PULSES_SENT++;
             }
+            if (source_index == module_name_to_index.at("qb") &&
+		  my_index == module_name_to_index.at("dr") &&
+                    p_t == Pulse_Type::HIGH) {
+		    if (QB_LOWEST == 0) {
+			    QB_LOWEST = PULSES_SO_FAR;
+		    }
+            }
+            if (source_index == module_name_to_index.at("mp") &&
+		  my_index == module_name_to_index.at("dr") &&
+                    p_t == Pulse_Type::HIGH) {
+		    if (MP_LOWEST == 0) {
+			    MP_LOWEST = PULSES_SO_FAR;
+		    }
+            }
+            if (source_index == module_name_to_index.at("ng") &&
+		  my_index == module_name_to_index.at("dr") &&
+                    p_t == Pulse_Type::HIGH) {
+		    if (NG_LOWEST == 0) {
+			    NG_LOWEST = PULSES_SO_FAR;
+		    }
+            }
+            if (source_index == module_name_to_index.at("qt") &&
+		  my_index == module_name_to_index.at("dr") &&
+                    p_t == Pulse_Type::HIGH) {
+		    if (QT_LOWEST == 0) {
+			    QT_LOWEST = PULSES_SO_FAR;
+		    }
+            }
             p_q.push({mod, my_index, pulse_to_send});
         }
     }
@@ -95,7 +131,6 @@ int32_t main() {
     std::filesystem::path file_path {"input.txt"};
     std::fstream file_handle {file_path};
     std::string line {};
-    std::unordered_map<std::string, int64_t> module_name_to_index;
 
     int64_t free_index {0};
     std::vector<Module> modules {};
@@ -149,10 +184,10 @@ int32_t main() {
             int64_t connected_mod_index = 0;
 
             if (*it == ' ') {
-                std::string trimmed {it.base() + 1, it.base() + 3};
+                std::string trimmed {it + 1, it + 3};
                 mod_name = trimmed;
             } else {
-                mod_name = {it.base(), it.base() + 2};
+                mod_name = {it, it + 2};
             }
 
             if (module_name_to_index.contains(mod_name)) {
@@ -171,10 +206,10 @@ int32_t main() {
 
     for (int64_t idx = 0; idx < modules.size(); ++idx) {
         auto &mod = modules.at(idx);
-        std::visit([&modules, idx] (auto&& arg) { 
+        std::visit([&modules, idx] (auto&& arg) {
             for (auto i: arg.modules) {
                 if (std::holds_alternative<Conjunction>(modules.at(i))) {
-                    std::visit([idx, i] (auto&& arg) { 
+                    std::visit([idx, i] (auto&& arg) {
                             using T = std::decay_t<decltype(arg)>;
                             if constexpr (std::is_same_v<T, Conjunction>) {
                                 arg.inputs.push_back(idx);
@@ -199,7 +234,7 @@ int32_t main() {
 
     Processing_Queue p_q {};
     int64_t lowest_required_pulses {};
-    for (int pulses = 0; pulses < 10000000; ++pulses) {
+    for (int pulses = 0; pulses < 30000; ++pulses) {
         LOW_PULSES_SENT++;
         PULSES_SO_FAR++;
         p_q.push({broadcaster_index, -1, Pulse_Type::LOW});
@@ -207,11 +242,6 @@ int32_t main() {
             auto front = p_q.front();
             p_q.pop();
             auto &mod = modules.at(std::get<0>(front));
-            if (std::get<0>(front) == module_name_to_index.at("rx") &&
-                    std::get<2>(front) == Pulse_Type::LOW) {
-                std::cout << "FOUND: " << pulses << "\n";
-                break;
-            }
             std::visit([&p_q, &front] (auto&& arg) {
                     arg.propagate_signal(p_q, std::get<0>(front), std::get<1>(front), std::get<2>(front)); },
                     mod);
@@ -222,4 +252,5 @@ int32_t main() {
         }
     }
     std::cout << lowest_required_pulses << std::endl;
+    std::cout << static_cast<int64_t>(std::lcm<int64_t>(QT_LOWEST, std::lcm<int64_t>(QB_LOWEST, std::lcm<int64_t>(MP_LOWEST, NG_LOWEST)))) << std::endl;
 }
